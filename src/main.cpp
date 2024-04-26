@@ -3,9 +3,15 @@
 
 // Include necessary libraries here
 // TODO: Add necessary libraries here
+#include <WiFi.h>
+#include <PubSubClient.h>
+#include <LiquidCrystal_I2C.h>
+#include <ArduinoJson.h>
+
 
 // Define global variables here
 // TODO: Add global variables here
+
 
 // Define functions here
 // TODO: Add functions here
@@ -34,4 +40,5 @@ void loop(void)
 {
   // Keep WiFi and MQTT connection alive
   // TODO: Keep WiFi and MQTT connection alive here
+
 }
