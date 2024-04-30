@@ -1,4 +1,3 @@
-
 #include <Arduino.h>
 
 // Include necessary libraries here
@@ -8,12 +7,11 @@
 #include <LiquidCrystal_I2C.h>
 #include <ArduinoJson.h>
 
-
 // Define global variables here
 
 // WiFi credentials
-const char *ssid = "IoTExperiment";
-const char *password = "iotexperiment303ab";
+const char *ssid = "IoTPrivate";
+const char *password = "iotprivate303";
 
 // MQTT credentials
 const char *mqtt_server = "mqtt.iotserver.uz";
@@ -34,32 +32,103 @@ const int yellowPin = 33;
 const int greenPin = 25;
 const int buttonPin = 26;
 
-// Define functions here
-// TODO: Add functions here
+// Define objects
+WiFiClient espClient;
+PubSubClient client(espClient);
+LiquidCrystal_I2C lcd(0x27, 16, 2); // Change I2C address and dimensions if needed
+
+// Function prototypes
+void setupWiFi();
+void setupMQTT();
+void callback(char *topic, byte *payload, unsigned int length);
+void publishButtonPress();
+void handleLedCommand(const char *command);
 
 /**********************************/
 // SETUP //
 void setup(void) 
 {
   // Initialize peripherals
-  // TODO: Initialize peripherals here
-  // TODO: LEDS, Buttons, LCD, etc.
+  pinMode(redPin, OUTPUT);
+  pinMode(yellowPin, OUTPUT);
+  pinMode(greenPin, OUTPUT);
+  pinMode(buttonPin, INPUT_PULLUP);
+  lcd.init();
+  lcd.backlight();
 
   // Connect to WiFi
-  // TODO: Connect to WiFi here
+  setupWiFi();
 
   // Setup MQTT
-  // TODO: Setup MQTT here
+  setupMQTT();
+}
 
-  // 
+// Connect to WiFi
+void setupWiFi() {
+  Serial.begin(115200);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to WiFi...");
+  }
+  Serial.println("Connected to WiFi");
+}
 
+// Setup MQTT
+void setupMQTT() {
+  client.setServer(mqtt_server, mqtt_port);
+  client.setCallback(callback);
 }
 
 /**********************************/
 // LOOP //
 void loop(void) 
 {
+  if (!client.connected()) {
+    // Reconnect if not connected to MQTT
+    setupMQTT();
+  }
+  client.loop();
   // Keep WiFi and MQTT connection alive
-  // TODO: Keep WiFi and MQTT connection alive here
+  if (WiFi.status() != WL_CONNECTED) {
+    setupWiFi();
+  }
+}
 
+// MQTT callback function
+void callback(char *topic, byte *payload, unsigned int length) {
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+
+  // Handle LED control commands
+  handleLedCommand((char *)payload);
+}
+
+// Publish button press
+void publishButtonPress() {
+  client.publish(btnPressTopic, "pressed");
+}
+
+// Handle LED control commands
+void handleLedCommand(const char *command) {
+  DynamicJsonDocument doc(1024);
+  deserializeJson(doc, command);
+  
+  if (doc.containsKey("red")) {
+    String state = doc["red"];
+    digitalWrite(redPin, state == "on" ? HIGH : LOW);
+  }
+  if (doc.containsKey("yellow")) {
+    String state = doc["yellow"];
+    digitalWrite(yellowPin, state == "on" ? HIGH : LOW);
+  }
+  if (doc.containsKey("green")) {
+    String state = doc["green"];
+    digitalWrite(greenPin, state == "on" ? HIGH : LOW);
+  }
 }
